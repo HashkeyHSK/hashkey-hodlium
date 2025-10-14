@@ -5,7 +5,7 @@ import { getContractAddresses } from '@/config/contracts';
 import { VeHSKABI } from '@/constants/veHSKAbi';
 import { useState, useEffect } from 'react';
 import { Address, TransactionReceipt, UserRejectedRequestError } from 'viem';
-import { writeContract, waitForTransactionReceipt } from '@wagmi/core';
+import { writeContract, waitForTransactionReceipt } from 'wagmi/actions';
 import { MintableAmountInfo } from '@/types/contracts';
 
 export function useMintVeHSK() {
@@ -164,4 +164,3 @@ export function useMintableAmount() {
 
   return data;
 }
-
