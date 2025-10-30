@@ -9,12 +9,16 @@ import { useStakeFlexible } from '@/hooks/useFlexibleStaking';
 import { toast } from 'react-toastify';
 import { formatEther, parseEther } from 'viem';
 import Link from 'next/link';
+import { STAKING_COUNTDOWN_TARGET, STAKING_COUNTDOWN_DISPLAY } from '@/constants/countdown';
 
 export default function StakePage() {
   const { address, isConnected } = useAccount();
   const { data: balanceData } = useBalance({
     address: address,
   });
+  
+  // Check if staking countdown has expired
+  const [isStakingExpired, setIsStakingExpired] = useState(false);
   
   // 使用固定值进行APR计算，避免频繁调用合约
   const simulationAmount = '1000';
@@ -45,6 +49,19 @@ export default function StakePage() {
   // State to track data source
   const [dataSource, setDataSource] = useState<'contract' | 'loading'>('loading');
   
+  // Check if staking countdown has expired
+  useEffect(() => {
+    const checkExpiration = () => {
+      const now = Date.now();
+      const isExpired = now >= STAKING_COUNTDOWN_TARGET;
+      setIsStakingExpired(isExpired);
+    };
+
+    checkExpiration();
+    const interval = setInterval(checkExpiration, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // 从URL参数中获取默认选择的质押类型
   useEffect(() => {
     // 获取URL参数
@@ -273,6 +290,76 @@ export default function StakePage() {
     }
   };
   
+  // If staking has expired, show a message
+  if (isStakingExpired) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="mb-8">
+              <svg className="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-light text-white mb-4">Contract Update in Progress</h1>
+            <p className="text-xl text-gray-400 mb-6">
+              New staking orders are temporarily unavailable as we will update the staking contract.
+            </p>
+            
+            <div className="mb-8 p-6 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h3 className="text-lg font-medium text-blue-300 mb-2 text-left">Important Notice</h3>
+                  <p className="text-blue-200 mb-3 text-left">
+                    New staking orders are temporarily unavailable as we will update the staking contract, but existing users can still withdraw your stakes and claim rewards.
+                  </p>
+                  <ul className="text-blue-200 space-y-2">
+                    <li className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Withdraw your existing stakes
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Claim your accumulated rewards
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      View your portfolio and staking history
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link 
+                href="/portfolio" 
+                className="inline-block bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                View My Portfolio
+              </Link>
+              <Link 
+                href="/" 
+                className="inline-block bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                Return to Dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="min-h-screen">
