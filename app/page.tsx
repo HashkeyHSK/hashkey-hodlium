@@ -16,7 +16,16 @@ import VeAddressBar from '@/components/VeAddressBar';
 
 import StartStake from '@/components/app/StartStake';
 import ClaimVehsk from '@/components/app/ClaimVehsk';
+import { STAKING_COUNTDOWN_TARGET, STAKING_COUNTDOWN_DISPLAY } from '@/constants/countdown';
 // import { useMintableAmount } from '@/hooks/useMintVeHSK'; // 导入 useMintableAmount hook
+
+type CountdownState = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  isExpired: boolean;
+};
 
 export default function Home() {
   // 添加本地loading状态，初始为true
@@ -34,6 +43,54 @@ export default function Home() {
   const [isLaunched, setIsLaunched] = useState(false);
   const [isAppEnabled, setIsAppEnabled] = useState(false);
   const [aprDataSource, setAprDataSource] = useState<'contract' | 'loading'>('loading');
+  const [stakingCountdown, setStakingCountdown] = useState<CountdownState>({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isExpired: false
+  });
+
+  const formatCountdownUnit = (value: number) => value.toString().padStart(2, '0');
+  const countdownUnits = [
+    { label: 'Days', value: stakingCountdown.days },
+    { label: 'Hours', value: stakingCountdown.hours },
+    { label: 'Minutes', value: stakingCountdown.minutes },
+    { label: 'Seconds', value: stakingCountdown.seconds }
+  ];
+
+  useEffect(() => {
+    const updateCountdown = (): boolean => {
+      const diff = STAKING_COUNTDOWN_TARGET - Date.now();
+
+      if (diff <= 0) {
+        setStakingCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return true;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setStakingCountdown({ days, hours, minutes, seconds, isExpired: false });
+      return false;
+    };
+
+    const alreadyExpired = updateCountdown();
+
+    if (alreadyExpired) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateCountdown()) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
   // const { mintableAmount, isLoading: isMintableAmountLoading } = useMintableAmount(); // 获取可铸造数量信息
   
   // 结合API加载状态和初始加载状态
@@ -324,18 +381,7 @@ export default function Home() {
   
   // 在首页的合适位置添加数据来源指示器
   const renderDataSourceIndicator = () => {
-    return (
-      <div className="mb-4 text-sm">
-        <span className="text-slate-400">
-          APR Data Source: {' '}
-          {aprDataSource === 'contract' ? (
-            <span className="text-green-500">Contract (Live Data)</span>
-          ) : (
-            <span className="text-yellow-500">Loading...</span>
-          )}
-        </span>
-      </div>
-    );
+    return (<></>);
   };
   
   // 已发布且应用已启用：显示主内容
@@ -470,9 +516,43 @@ export default function Home() {
         {/* Staking Options Section */}
         <div className="container mx-auto px-4 py-16">
           <h2 className="text-3xl font-light mb-10 text-center text-white">Staking Options</h2>
-          <div className="flex justify-center mb-8">
+          <div className="flex flex-col items-center gap-6 mb-8">
+            {!stakingCountdown.isExpired && (
+              <div className="flex flex-col items-center gap-6 bg-slate-800/50 backdrop-blur-sm border border-slate-600/60 rounded-3xl px-8 py-8 max-w-4xl mx-auto shadow-xl">
+                <span className="text-sm font-semibold tracking-[0.4em] uppercase text-slate-300 bg-slate-700/60 px-6 py-3 rounded-full border border-slate-600/40 shadow-lg shadow-slate-900/30">Pause Countdown</span>
+                <div className="flex flex-wrap justify-center gap-6 text-white font-mono text-3xl md:text-4xl">
+                  {countdownUnits.map((unit) => (
+                    <div key={unit.label} className="flex flex-col items-center gap-3">
+                      <span className="px-6 py-4 rounded-2xl bg-slate-900/80 border border-slate-600/70 shadow-lg min-w-[80px] text-center">
+                        {formatCountdownUnit(unit.value)}
+                      </span>
+                      <span className="text-sm uppercase tracking-[0.3em] text-slate-400 font-medium">{unit.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <span className="text-sm text-slate-400 font-medium">
+                  Staking will be temporarily suspended at Oct 30, 10:00 AM UTC
+                </span>
+              </div>
+            )}
             {renderDataSourceIndicator()}
           </div>
+          {stakingCountdown.isExpired && (
+            <div className="mb-8 p-6 bg-blue-900/20 border border-blue-500/30 rounded-xl max-w-4xl mx-auto">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h3 className="text-lg font-medium text-blue-300 mb-2">Contract Update Notice</h3>
+                  <p className="text-blue-200 text-lg leading-relaxed">
+                    New staking orders are temporarily unavailable as we will update the staking contract, but existing users can still withdraw your stakes and claim rewards.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-16">
             {stakingOptions.map((option, index) => (
               <div key={index} className="bg-slate-800/30 backdrop-blur-sm rounded-xl border border-slate-700/50 overflow-hidden hover:border-primary/30 transition-all">
@@ -506,14 +586,14 @@ export default function Home() {
                   </div> */}
                 </div>
                 
-                <div className="p-6 border-t border-slate-700/50">
-                  <Link 
-                    href={`/stake?type=${option.stakeType}`} 
-                    className="block w-full py-3 text-center bg-primary/80 text-white rounded-lg hover:bg-primary transition-colors"
-                  >
-                    Select
-                  </Link>
-                </div>
+                {!stakingCountdown.isExpired && (<div className="p-6 border-t border-slate-700/50">
+                    <Link 
+                      href={`/stake?type=${option.stakeType}`} 
+                      className="block w-full py-3 text-center bg-primary/80 text-white rounded-lg hover:bg-primary transition-colors"
+                    >
+                      Select
+                    </Link>
+                </div>)}
               </div>
             ))}
           </div>

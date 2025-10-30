@@ -1,16 +1,31 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ConnectKitButton } from 'connectkit';
 import { usePathname } from 'next/navigation';
+import { STAKING_COUNTDOWN_TARGET } from '@/constants/countdown';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [isStakingExpired, setIsStakingExpired] = useState(false);
   
   const isActive = (path: string) => {
     return pathname === path ? 'bg-primary/10 text-primary' : 'text-gray-700 hover:bg-primary/5 hover:text-primary';
   };
+
+  // Check if staking countdown has expired
+  useEffect(() => {
+    const checkExpiration = () => {
+      const now = Date.now();
+      const isExpired = now >= STAKING_COUNTDOWN_TARGET;
+      setIsStakingExpired(isExpired);
+    };
+
+    checkExpiration();
+    const interval = setInterval(checkExpiration, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="navbar bg-base-100 shadow-sm">
@@ -23,7 +38,7 @@ export default function Navbar() {
           </label>
           <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-50 p-2 shadow bg-base-100 rounded-box w-52">
             <li><Link href="/" className={isActive('/')}>Dashboard</Link></li>
-            <li><Link href="/stake" className={isActive('/stake')}>Stake</Link></li>
+            {!isStakingExpired && <li><Link href="/stake" className={isActive('/stake')}>Stake</Link></li>}
             <li><Link href="/portfolio" className={isActive('/portfolio')}>My Portfolio</Link></li>
           </ul>
         </div>
@@ -35,7 +50,7 @@ export default function Navbar() {
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
           <li><Link href="/" className={`px-4 py-2 rounded-md mx-1 ${isActive('/')}`}>Dashboard</Link></li>
-          <li><Link href="/stake" className={`px-4 py-2 rounded-md mx-1 ${isActive('/stake')}`}>Stake</Link></li>
+          {!isStakingExpired && <li><Link href="/stake" className={`px-4 py-2 rounded-md mx-1 ${isActive('/stake')}`}>Stake</Link></li>}
           <li><Link href="/portfolio" className={`px-4 py-2 rounded-md mx-1 ${isActive('/portfolio')}`}>My Portfolio</Link></li>
         </ul>
       </div>
