@@ -18,7 +18,9 @@ export default function PortfolioPage() {
   const { lockedStakeCount, activeLockedStakes, isLoading: loadingInfo } = useUserStakingInfo();
   const { unstakeLocked, isPending: unstakePending, isConfirming: unstakeConfirming } = useUnstakeLocked();
   const [stakedPositions, setStakedPositions] = useState<Array<{ id: number, info: LockedStakeInfo }>>([]);
-  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
+  const [isLoadingLockedPositions, setIsLoadingLockedPositions] = useState(true);
+  const [isLoadingFlexiblePositions, setIsLoadingFlexiblePositions] = useState(true);
+  const isLoadingPositions = isLoadingLockedPositions || isLoadingFlexiblePositions;
   const [processingStakeId, setProcessingStakeId] = useState<number | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
   const chainId = useChainId();
@@ -69,9 +71,16 @@ export default function PortfolioPage() {
   
   // 加载用户所有锁定质押
   const fetchStakedPositions = useCallback(async () => {
-    if (!isConnected || !address || !lockedStakeCount || !publicClient) return;
+    if (!isConnected || !address || !publicClient) {
+      setIsLoadingLockedPositions(false);
+      return;
+    }
+    if (!lockedStakeCount) {
+      setIsLoadingLockedPositions(false);
+      return;
+    }
     
-    setIsLoadingPositions(true);
+    setIsLoadingLockedPositions(true);
     
     try {
       // 创建质押ID数组
@@ -111,7 +120,7 @@ export default function PortfolioPage() {
       console.error('Failed to fetch staked positions:', error);
       toast.error('Failed to load your stakes');
     } finally {
-      setIsLoadingPositions(false);
+      setIsLoadingLockedPositions(false);
     }
   }, [address, isConnected, lockedStakeCount, publicClient, contractAddress]);
   
@@ -310,7 +319,7 @@ export default function PortfolioPage() {
               </div>
             </div>
             <h2 className="text-2xl font-light text-white mb-6">Active Stakes</h2>
-            {isLoadingPositions ? (
+            {(isLoadingLockedPositions || loadingInfo) ? (
               <div className="space-y-4">
                 {[1, 2].map((i) => (
                   <div key={i} className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 animate-pulse">
@@ -435,8 +444,8 @@ export default function PortfolioPage() {
             {/* 添加灵活质押部分 */}
             <FlexibleStakingPositions
               onTotalRewardsChange={(rewards) => setTotalRewards((prev) => prev + rewards)}
-              isLoadingPositions={isLoadingPositions}
-              setIsLoadingPositions={setIsLoadingPositions}
+              isLoadingPositions={isLoadingFlexiblePositions}
+              setIsLoadingPositions={setIsLoadingFlexiblePositions}
               processingStakeId={processingStakeId}
               setProcessingStakeId={setProcessingStakeId}
               getFlexibleAPR={getFlexibleAPR}

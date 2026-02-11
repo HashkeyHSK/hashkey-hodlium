@@ -71,7 +71,10 @@ const FlexibleStakingPositions: React.FC<FlexibleStakingPositionsProps> = ({
 
   // 使用 useCallback 避免 fetchFlexiblePositions 频繁更新
   const fetchFlexiblePositions = useCallback(async () => {
-    if (!isConnected || !address || !flexibleStakeCount || !publicClient) return;
+    if (!isConnected || !address || !flexibleStakeCount || !publicClient) {
+      setIsLoadingPositions(false);
+      return;
+    }
     setIsLoadingPositions(true);
     try {
       const flexibleStakeIds = Array.from({ length: Number(flexibleStakeCount) }, (_, i) => i);
